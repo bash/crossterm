@@ -74,6 +74,7 @@ pub(crate) fn parse_event(
                         }
                     }
                     b'[' => parse_csi(buffer),
+                    b']' => parse_osc_string(buffer),
                     b'\x1B' => Ok(Some(InternalEvent::Event(Event::Key(KeyCode::Esc.into())))),
                     _ => parse_event(&buffer[1..], input_available).map(|event_option| {
                         event_option.map(|event| {
@@ -211,6 +212,24 @@ pub(crate) fn parse_csi(buffer: &[u8]) -> io::Result<Option<InternalEvent>> {
     };
 
     Ok(input_event.map(InternalEvent::Event))
+}
+
+pub(crate) fn parse_osc_string(buffer: &[u8]) -> io::Result<Option<InternalEvent>> {
+    assert!(buffer.starts_with(b"\x1B]")); // ESC ]
+
+    if buffer.len() == 2 {
+        return Ok(None);
+    }
+
+    const ST: &[u8] = b"\x1b\\";
+    const BEL: &[u8] = b"\x07";
+    if let Some(buf) = buffer.strip_suffix(ST).or_else(|| buffer.strip_suffix(BEL)) {
+        Ok(Some(InternalEvent::Event(Event::OscString(
+            buf[2..].to_vec(),
+        ))))
+    } else {
+        Ok(None)
+    }
 }
 
 pub(crate) fn next_parsed<T>(iter: &mut dyn Iterator<Item = &str>) -> io::Result<T>
@@ -1501,6 +1520,26 @@ mod tests {
                 KeyModifiers::CONTROL,
                 KeyEventKind::Release,
             )))),
+        );
+    }
+
+    #[test]
+    fn test_parse_osc_string_terminated_with_st() {
+        assert_eq!(
+            parse_event(b"\x1b]11;rgb:fdfd/f0f0/eded\x1b\\", false).unwrap(),
+            Some(InternalEvent::Event(Event::OscString(
+                b"11;rgb:40/40/40".to_vec()
+            ))),
+        );
+    }
+
+    #[test]
+    fn test_parse_osc_string_terminated_with_bel() {
+        assert_eq!(
+            parse_event(b"\x1b]11;rgb:fdfd/f0f0/eded\x07", false).unwrap(),
+            Some(InternalEvent::Event(Event::OscString(
+                b"11;rgb:40/40/40".to_vec()
+            ))),
         );
     }
 }

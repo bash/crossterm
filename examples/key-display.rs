@@ -5,7 +5,7 @@
 //!
 //! cargo run --example key-display
 
-use std::io;
+use std::io::{self, stdout, Write};
 
 use crossterm::event::{KeyEventKind, KeyModifiers};
 use crossterm::{
@@ -21,6 +21,7 @@ const HELP: &str = r#"Key display
 fn main() -> io::Result<()> {
     println!("{}", HELP);
     enable_raw_mode()?;
+    _ = stdout().flush();
     if let Err(e) = print_events() {
         println!("Error: {:?}\r", e);
     }
@@ -32,6 +33,7 @@ fn print_events() -> io::Result<()> {
     loop {
         let event = read()?;
         match event {
+            Event::OscString(str) => println!("OSC input: {:?}\r", std::str::from_utf8(&str)),
             Event::Key(event) if event.kind == KeyEventKind::Press => {
                 print!("Key pressed: ");
                 if event.modifiers != KeyModifiers::NONE {
@@ -40,6 +42,10 @@ fn print_events() -> io::Result<()> {
                 println!("{}\r", event.code);
                 if event.code == KeyCode::Esc {
                     break;
+                }
+                if event.code == KeyCode::Char('b') {
+                    print!("\x1b]11;?\x1b\\");
+                    _ = stdout().flush();
                 }
             }
             _ => {}
