@@ -563,6 +563,62 @@ pub enum Event {
     /// An resize event with new dimensions after resize (columns, rows).
     /// **Note** that resize events can occur in batches.
     Resize(u16, u16),
+    /// An event sent by the terminal in response to a color request.
+    Color(ColorEvent),
+}
+
+/// Represents a color response event.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
+pub struct ColorEvent {
+    pub number: ColorNumber,
+    pub value: Rgba,
+}
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
+pub enum ColorNumber {
+    /// An index into the 256-color palette.
+    /// These colors are set and queried using the `OSC 4` sequence.
+    PaletteIndex(u8),
+    /// A *dynamic color*. Each of these colors has their own `OSC` number
+    /// starting with `10` for the text foreground color.
+    /// They can also be set and queried using the `OSC 5` sequence.
+    Dynamic(DynamicColorNumber),
+}
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
+pub enum DynamicColorNumber {
+    TextForegroundColor = 10,
+    TextBackgroundColor = 11,
+    TextCursorColor = 12,
+    MouseForegroundColor = 13,
+    MouseBackgroundColor = 14,
+    TektronixForegroundColor = 15,
+    TektronixBackgroundColor = 16,
+    HighlightBackgroundColor = 17,
+    TektronixCursorColor = 18,
+    HighlightForegroundColor = 19,
+}
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
+pub struct Rgba {
+    pub r: u16,
+    pub g: u16,
+    pub b: u16,
+    pub a: u16,
+}
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
+pub enum ColorOrQuery {
+    /// Set the color to the specified RGBA value.
+    Color(Rgba),
+    /// Query the terminal for the current value of the color.
+    /// The terminal may or may not respond with a [`ColorEvent`].
+    Query,
 }
 
 impl Event {
