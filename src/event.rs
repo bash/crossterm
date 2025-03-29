@@ -565,6 +565,10 @@ pub enum Event {
     Resize(u16, u16),
     /// An event sent by the terminal in response to a color request.
     Color(ColorEvent),
+    /// An event sent by the terminal when the color palette
+    /// has been updated (e.g. by the user or automatically to follow
+    /// the system's dark/light preference).
+    ColorPaletteUpdated(ColorMode),
 }
 
 /// Represents a color response event.
@@ -620,6 +624,29 @@ pub enum ColorOrQuery {
     /// The terminal may or may not respond with a [`ColorEvent`].
     Query,
 }
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
+pub enum ColorMode {
+    Dark,
+    Light,
+}
+
+/// A command that requests the current color mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RequestColorMode;
+
+/// TODO.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EnableColorModeNotification;
+
+/// TODO.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DisableColorModeNotification;
+
+/// TODO.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SetOrQueryColor(ColorNumber, ColorOrQuery);
 
 impl Event {
     /// Returns `true` if the event is a key press event.
